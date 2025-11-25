@@ -44,27 +44,27 @@ const OutlineItem: React.FC<{
   return (
     <div className="select-none text-slate-700">
       <div 
-        className={`group flex items-center py-1.5 px-2 my-0.5 rounded-lg cursor-pointer transition-all duration-200 ${level > 0 ? 'ml-4' : ''} hover:bg-blue-50/50 ${isChecked ? 'bg-blue-50/30' : ''}`}
+        className={`group flex items-center py-2 px-2 my-0.5 rounded-lg cursor-pointer transition-all duration-200 ${level > 0 ? 'ml-4' : ''} hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-100 ${isChecked ? 'bg-blue-50/50 border-blue-50' : ''}`}
         onClick={handleTitleClick}
       >
         <button 
           onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-          className={`p-1 mr-1 rounded-md text-slate-400 hover:bg-blue-100 hover:text-blue-600 transition-colors ${!node.items || node.items.length === 0 ? 'invisible' : ''}`}
+          className={`p-1 mr-1.5 rounded-md text-slate-400 hover:bg-blue-100 hover:text-blue-600 transition-colors ${!node.items || node.items.length === 0 ? 'invisible' : ''}`}
         >
           {expanded ? <ChevronDown size={14} strokeWidth={2.5} /> : <ChevronRight size={14} strokeWidth={2.5} />}
         </button>
 
-        <button onClick={handleCheckClick} className={`mr-2 transition-colors ${isChecked ? 'text-blue-600 scale-105' : 'text-slate-300 hover:text-blue-400'}`}>
+        <button onClick={handleCheckClick} className={`mr-2.5 transition-all duration-200 ${isChecked ? 'text-blue-600 scale-105' : 'text-slate-300 hover:text-blue-400 hover:scale-110'}`}>
           {isChecked ? <CheckSquare size={18} strokeWidth={2.5} /> : <Square size={18} strokeWidth={2} />}
         </button>
 
-        <span className={`text-sm truncate flex-1 font-medium transition-colors ${isChecked ? 'text-blue-700' : 'group-hover:text-blue-600'}`} title={node.title}>
+        <span className={`text-sm truncate flex-1 font-medium transition-colors ${isChecked ? 'text-blue-700' : 'text-slate-600 group-hover:text-blue-600'}`} title={node.title}>
           {node.title} <span className="text-[10px] text-slate-400 ml-1 font-normal opacity-0 group-hover:opacity-100 transition-opacity">(Pg {node.pageNumber})</span>
         </span>
       </div>
 
       {expanded && node.items && node.items.length > 0 && (
-        <div className="border-l border-slate-200 ml-3.5 pl-1">
+        <div className="border-l border-slate-200 ml-4 pl-1 my-1">
           {node.items.map((child, idx) => (
             <OutlineItem 
               key={`${child.title}-${idx}`} 

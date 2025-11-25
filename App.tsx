@@ -17,7 +17,8 @@ function App() {
   
   // Layout & Resizing State
   const [sidebarWidth, setSidebarWidth] = useState(320);
-  const [isResizing, setIsResizing] = useState(false);
+  const [assistantWidth, setAssistantWidth] = useState(400);
+  const [activeResizer, setActiveResizer] = useState<'outline' | 'assistant' | null>(null);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   // Modals State
@@ -38,24 +39,34 @@ function App() {
   }, []);
 
   // Resize Handlers
-  const startResizing = useCallback((e: React.MouseEvent) => {
+  const startResizingOutline = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
-    setIsResizing(true);
+    setActiveResizer('outline');
+  }, []);
+
+  const startResizingAssistant = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setActiveResizer('assistant');
   }, []);
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
-      if (!isResizing) return;
-      // Constrain sidebar width
-      const newWidth = Math.max(220, Math.min(600, e.clientX));
-      setSidebarWidth(newWidth);
+      if (!activeResizer) return;
+      
+      if (activeResizer === 'outline') {
+        const newWidth = Math.max(220, Math.min(600, e.clientX));
+        setSidebarWidth(newWidth);
+      } else if (activeResizer === 'assistant') {
+        const newWidth = Math.max(300, Math.min(800, window.innerWidth - e.clientX));
+        setAssistantWidth(newWidth);
+      }
     };
 
     const handleMouseUp = () => {
-      setIsResizing(false);
+      setActiveResizer(null);
     };
 
-    if (isResizing) {
+    if (activeResizer) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = 'col-resize';
@@ -71,23 +82,36 @@ function App() {
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-  }, [isResizing]);
+  }, [activeResizer]);
 
   // Robust outline range calculation
   const enhanceOutlineRanges = (nodes: OutlineNode[], totalPages: number): OutlineNode[] => {
     const processNodes = (currentNodes: OutlineNode[], startLimit: number, endLimit: number) => {
+        // Ensure nodes are sorted by page number to prevent range errors
+        currentNodes.sort((a, b) => a.pageNumber - b.pageNumber);
+
         for (let i = 0; i < currentNodes.length; i++) {
             const node = currentNodes[i];
             const nextNode = currentNodes[i + 1];
+            // If there is a next node, the current chapter ends before it starts.
+            // If not, it ends at the parent's endLimit.
             const nextStart = nextNode ? nextNode.pageNumber : endLimit + 1;
             
+            // Default range for this node is up to the start of the next one
+            let calculatedEnd = nextStart - 1;
+
             if (node.items && node.items.length > 0) {
-                processNodes(node.items, node.pageNumber, nextStart - 1);
-                node.endPageNumber = nextStart - 1;
+                // Recursively process children with the current node's range
+                processNodes(node.items, node.pageNumber, calculatedEnd);
+                
+                // After processing children, ensure parent's endPageNumber covers them.
+                // In a valid TOC, the last child's end should align with calculatedEnd.
+                node.endPageNumber = calculatedEnd;
             } else {
-                node.endPageNumber = nextStart - 1;
+                node.endPageNumber = calculatedEnd;
             }
 
+            // Safety check: end page cannot be before start page
             if (node.endPageNumber < node.pageNumber) {
                 node.endPageNumber = node.pageNumber;
             }
@@ -292,20 +316,15 @@ function App() {
            />
         </aside>
 
-        {/* Resizer Handle (Desktop Only) */}
+        {/* Resizer Handle (Left) */}
         {!isMobile && (
           <div
             className="hidden md:flex w-0 hover:w-0 z-20 cursor-col-resize items-center justify-center relative group"
-            onMouseDown={startResizing}
+            onMouseDown={startResizingOutline}
           >
-             {/* Interaction Area */}
-             <div className={`absolute left-[-6px] top-0 bottom-0 w-4 hover:bg-blue-400/0 transition-colors ${isResizing ? 'bg-blue-500/0' : ''}`}></div>
-             
-             {/* Visible Line */}
-             <div className={`w-[1px] h-full bg-slate-200 transition-colors duration-300 group-hover:bg-blue-400/50 group-hover:w-[2px] ${isResizing ? 'bg-blue-500 w-[2px] shadow-[0_0_10px_rgba(59,130,246,0.5)]' : ''}`}></div>
-             
-             {/* Handle Icon */}
-             <div className={`absolute top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-400 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isResizing ? 'opacity-100 text-blue-500 border-blue-400' : ''}`}>
+             <div className={`absolute left-[-6px] top-0 bottom-0 w-4 hover:bg-blue-400/0 transition-colors ${activeResizer === 'outline' ? 'bg-blue-500/0' : ''}`}></div>
+             <div className={`w-[1px] h-full bg-slate-200 transition-colors duration-300 group-hover:bg-blue-400/50 group-hover:w-[2px] ${activeResizer === 'outline' ? 'bg-blue-500 w-[2px] shadow-[0_0_10px_rgba(59,130,246,0.5)]' : ''}`}></div>
+             <div className={`absolute top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-400 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${activeResizer === 'outline' ? 'opacity-100 text-blue-500 border-blue-400' : ''}`}>
                <GripVertical size={12} />
              </div>
           </div>
@@ -323,17 +342,31 @@ function App() {
             onDocumentLoadSuccess={handleDocumentLoad}
             setCanvasRef={(ref) => canvasRef.current = ref}
           />
-          {/* Overlay to catch events during resize if needed, though mousemove is on window */}
-          {isResizing && <div className="absolute inset-0 z-50 bg-transparent" />}
+          {/* Overlay to catch events during resize */}
+          {activeResizer && <div className="absolute inset-0 z-50 bg-transparent" />}
         </section>
 
-        {/* Right: AI Assistant - Fixed Width on Desktop */}
+        {/* Resizer Handle (Right) */}
+        {!isMobile && file && (
+          <div
+            className="hidden md:flex w-0 hover:w-0 z-20 cursor-col-resize items-center justify-center relative group"
+            onMouseDown={startResizingAssistant}
+          >
+             <div className={`absolute left-[-6px] top-0 bottom-0 w-4 hover:bg-blue-400/0 transition-colors ${activeResizer === 'assistant' ? 'bg-blue-500/0' : ''}`}></div>
+             <div className={`w-[1px] h-full bg-slate-200 transition-colors duration-300 group-hover:bg-blue-400/50 group-hover:w-[2px] ${activeResizer === 'assistant' ? 'bg-blue-500 w-[2px] shadow-[0_0_10px_rgba(59,130,246,0.5)]' : ''}`}></div>
+             <div className={`absolute top-1/2 -translate-y-1/2 bg-white border border-slate-200 text-slate-400 rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${activeResizer === 'assistant' ? 'opacity-100 text-blue-500 border-blue-400' : ''}`}>
+               <GripVertical size={12} />
+             </div>
+          </div>
+        )}
+
+        {/* Right: AI Assistant - Resizable on Desktop */}
         <aside 
           className="flex-shrink-0 flex flex-col border-l border-slate-200/60 bg-white/90 z-10 shadow-[-4px_0_24px_-12px_rgba(0,0,0,0.05)]"
           style={{ 
-            width: isMobile ? '100%' : 400, // Fixed width for assistant on desktop
+            width: isMobile ? '100%' : assistantWidth,
             height: isMobile ? 'flex' : '100%',
-            flex: isMobile ? '1 1 0%' : 'none' // Fill remaining height on mobile
+            flex: isMobile ? '1 1 0%' : 'none'
           }}
         >
            <AssistantPanel 
