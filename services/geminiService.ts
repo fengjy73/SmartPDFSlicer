@@ -3,7 +3,7 @@ import { GoogleGenAI } from "@google/genai";
 const getClient = () => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("API Key is missing");
+    throw new Error("API Key is missing. Please set your API Key.");
   }
   return new GoogleGenAI({ apiKey });
 };
@@ -59,6 +59,7 @@ export const analyzeContent = async (
 
   } catch (error) {
     console.error("Gemini API Error:", error);
-    return `Error: ${error instanceof Error ? error.message : "Unknown error occurred"}`;
+    // Rethrow error so the UI can display it
+    throw error;
   }
 };

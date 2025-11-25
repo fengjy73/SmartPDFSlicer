@@ -4,7 +4,7 @@ import { PreviewPanel } from './components/PreviewPanel';
 import { AssistantPanel } from './components/AssistantPanel';
 import { UploadOverlay } from './components/UploadOverlay';
 import { OutlineNode } from './types';
-import { Download, Scissors, X, Trash2, AlertTriangle, FileText, GripVertical, Sparkles, Zap } from 'lucide-react';
+import { Download, Scissors, X, Trash2, AlertTriangle, FileText, GripVertical, Sparkles } from 'lucide-react';
 import { slicePDF, downloadBlob } from './services/pdfUtils';
 
 function App() {
@@ -100,7 +100,20 @@ function App() {
 
   const handleDocumentLoad = async ({ numPages, outline: resolvedOutline }: { numPages: number, outline: any[] }) => {
     setNumPages(numPages);
-    const enhancedOutline = enhanceOutlineRanges(resolvedOutline, numPages);
+    
+    let finalOutline = resolvedOutline;
+
+    // Fallback: If no outline is found, generate a page-based outline
+    if (!resolvedOutline || resolvedOutline.length === 0) {
+        finalOutline = Array.from({ length: numPages }, (_, i) => ({
+            title: `Page ${i + 1}`,
+            pageNumber: i + 1,
+            items: [],
+            endPageNumber: i + 1
+        }));
+    }
+
+    const enhancedOutline = enhanceOutlineRanges(finalOutline, numPages);
     setOutline(enhancedOutline);
   };
 
@@ -217,43 +230,45 @@ function App() {
           </div>
         </div>
 
-        {file && (
-          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-             <div className="text-sm text-slate-500 hidden md:flex items-center gap-2 bg-slate-100/50 px-4 py-1.5 rounded-full border border-slate-200/50 hover:bg-white transition-colors">
-                <FileText size={14} className="text-blue-500" />
-                <span className="font-bold text-slate-700">{selectedPages.size}</span> 
-                <span className="opacity-70 text-xs uppercase tracking-wide font-medium">pages selected</span>
-             </div>
-             
-             <div className="h-6 w-px bg-slate-200/60 mx-1 hidden md:block"></div>
-             
-             <button 
-                onClick={handleDownloadClick}
-                disabled={selectedPages.size === 0 || isProcessing}
-                className={`
-                  flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm tracking-wide transition-all duration-300
-                  ${selectedPages.size > 0 
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95' 
-                    : 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200'}
-                `}
-             >
-                {isProcessing ? (
-                   <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                   <Download size={18} strokeWidth={2.5} />
-                )}
-                <span className="hidden sm:inline">Cut & Download</span>
-             </button>
+        <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
+          {file && (
+            <>
+              <div className="text-sm text-slate-500 hidden md:flex items-center gap-2 bg-slate-100/50 px-4 py-1.5 rounded-full border border-slate-200/50 hover:bg-white transition-colors">
+                  <FileText size={14} className="text-blue-500" />
+                  <span className="font-bold text-slate-700">{selectedPages.size}</span> 
+                  <span className="opacity-70 text-xs uppercase tracking-wide font-medium">pages selected</span>
+              </div>
+              
+              <div className="h-6 w-px bg-slate-200/60 mx-1 hidden md:block"></div>
+              
+              <button 
+                  onClick={handleDownloadClick}
+                  disabled={selectedPages.size === 0 || isProcessing}
+                  className={`
+                    flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-sm tracking-wide transition-all duration-300
+                    ${selectedPages.size > 0 
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/25 hover:shadow-blue-500/40 hover:-translate-y-0.5 active:translate-y-0 active:scale-95' 
+                      : 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200'}
+                  `}
+              >
+                  {isProcessing ? (
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <Download size={18} strokeWidth={2.5} />
+                  )}
+                  <span className="hidden sm:inline">Cut & Download</span>
+              </button>
 
-             <button 
-                onClick={handleResetClick}
-                className="group relative text-slate-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-full transition-all duration-200 flex items-center justify-center"
-                title="Close PDF"
-             >
-                <Trash2 size={20} strokeWidth={2} className="transition-transform group-hover:scale-110" />
-             </button>
-          </div>
-        )}
+              <button 
+                  onClick={handleResetClick}
+                  className="group relative text-slate-400 hover:text-red-500 hover:bg-red-50 p-2.5 rounded-full transition-all duration-200 flex items-center justify-center"
+                  title="Close PDF"
+              >
+                  <Trash2 size={20} strokeWidth={2} className="transition-transform group-hover:scale-110" />
+              </button>
+            </>
+          )}
+        </div>
       </header>
 
       {/* Main Layout - Flexbox for Resizable Columns */}

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, FileText, Bot } from 'lucide-react';
+import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, FileText, Bot, Key } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeContent } from '../services/geminiService';
 import { extractTextFromPages, extractImagesFromPages } from '../services/pdfUtils';
@@ -37,6 +37,14 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     });
+  };
+
+  const openApiKeyModal = async () => {
+    if ((window as any).aistudio && (window as any).aistudio.openSelectKey) {
+        await (window as any).aistudio.openSelectKey();
+    } else {
+        alert("API Key management is provided by the platform environment.");
+    }
   };
 
   // Unified send handler
@@ -96,10 +104,20 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
       setMessages(prev => [...prev, modelMsg]);
 
     } catch (error) {
+       const errorMessage = error instanceof Error ? error.message : "Failed to analyze content.";
+       
+       let finalErrorText = `Error: ${errorMessage}`;
+       
+       if (errorMessage.includes("API Key is missing") || errorMessage.includes("Requested entity was not found")) {
+           finalErrorText = "Error: API Key is missing or invalid. Please set your API Key to continue.";
+           // Auto-trigger the modal if possible, or user relies on the button. 
+           // We will show a special message asking them to click the Key button.
+       }
+
        setMessages(prev => [...prev, {
          id: Date.now().toString(),
          role: 'model',
-         text: `Error: ${error instanceof Error ? error.message : "Failed to analyze content."}`
+         text: finalErrorText
        }]);
     } finally {
       setLoading(false);
@@ -136,10 +154,20 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
                 {selectedPages.size} <span className="hidden sm:inline">pages</span>
             </span>
             <button 
-                onClick={() => setMessages([])} 
-                className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-1 transition-colors px-2 py-1"
+               onClick={openApiKeyModal}
+               className="text-xs text-slate-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+               title="Set API Key"
             >
-                <RefreshCw size={12}/> Clear
+               <Key size={12} />
+               <span className="hidden sm:inline">Key</span>
+            </button>
+            <button 
+                onClick={() => setMessages([])} 
+                className="text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                title="Clear Chat"
+            >
+                <RefreshCw size={12}/>
+                <span className="hidden sm:inline">Clear</span>
             </button>
         </div>
       </div>
