@@ -1,23 +1,22 @@
 import { GoogleGenAI } from "@google/genai";
 
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("API Key is missing. Please set your API Key.");
-  }
-  return new GoogleGenAI({ apiKey });
-};
-
 export const analyzeContent = async (
+  apiKey: string,
+  modelId: string,
   contextText: string,
   images: string[],
   prompt: string, 
   customSystemPrompt?: string
 ): Promise<string> => {
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please configure it in settings.");
+  }
+
   try {
-    const ai = getClient();
+    const ai = new GoogleGenAI({ apiKey });
     
-    const modelId = "gemini-2.5-flash"; 
+    // Use the user-selected model, default to 2.5 flash if something goes wrong
+    const targetModel = modelId || "gemini-2.5-flash"; 
 
     const parts: any[] = [];
 
@@ -45,7 +44,7 @@ export const analyzeContent = async (
     const defaultSystemPrompt = "You are a helpful AI assistant analyzing specific chapters of a PDF document. Answer the user's questions based strictly on the provided text and visual context. Use Markdown for formatting.";
 
     const response = await ai.models.generateContent({
-      model: modelId,
+      model: targetModel,
       contents: {
         role: 'user',
         parts: parts

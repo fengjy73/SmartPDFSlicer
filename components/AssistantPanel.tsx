@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
-import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, FileText, Bot, Key } from 'lucide-react';
+import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, Bot, Settings, X, ExternalLink, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { analyzeContent } from '../services/geminiService';
 import { extractTextFromPages, extractImagesFromPages } from '../services/pdfUtils';
@@ -9,6 +9,13 @@ interface AssistantPanelProps {
   file: File | null;
   selectedPages: Set<number>;
 }
+
+const AVAILABLE_MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Balanced & Recommended)' },
+  { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro (High Reasoning)' },
+  { id: 'gemini-2.0-flash-lite-preview-02-05', name: 'Gemini 2.0 Flash Lite (Fastest)' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Legacy)' },
+];
 
 export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPages }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -22,7 +29,29 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
   const [loading, setLoading] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
+  // Settings State
+  const [showSettings, setShowSettings] = useState(false);
+  const [apiKey, setApiKey] = useState('');
+  const [modelId, setModelId] = useState('gemini-2.5-flash');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Load settings from localStorage on mount
+  useEffect(() => {
+    const savedKey = localStorage.getItem('pdfslice_api_key');
+    const savedModel = localStorage.getItem('pdfslice_model_id');
+    if (savedKey) setApiKey(savedKey);
+    // Validate if saved model still exists in our list, otherwise default
+    if (savedModel && AVAILABLE_MODELS.some(m => m.id === savedModel)) {
+      setModelId(savedModel);
+    }
+  }, []);
+
+  const saveSettings = () => {
+    localStorage.setItem('pdfslice_api_key', apiKey);
+    localStorage.setItem('pdfslice_model_id', modelId);
+    setShowSettings(false);
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -37,14 +66,6 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
       setCopiedId(id);
       setTimeout(() => setCopiedId(null), 2000);
     });
-  };
-
-  const openApiKeyModal = async () => {
-    if ((window as any).aistudio && (window as any).aistudio.openSelectKey) {
-        await (window as any).aistudio.openSelectKey();
-    } else {
-        alert("API Key management is provided by the platform environment.");
-    }
   };
 
   // Unified send handler
@@ -63,6 +84,16 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
             id: Date.now().toString(),
             role: 'model',
             text: "Please select at least one page or chapter from the outline on the left for me to analyze."
+        }]);
+        return;
+    }
+
+    if (!apiKey) {
+        setShowSettings(true);
+        setMessages(prev => [...prev, {
+            id: Date.now().toString(),
+            role: 'model',
+            text: "Please configure your Gemini API Key in the settings to continue."
         }]);
         return;
     }
@@ -90,6 +121,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
       }
 
       const responseText = await analyzeContent(
+          apiKey,
+          modelId,
           extractedText, 
           extractedImages, 
           userMsg.text, 
@@ -108,10 +141,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
        
        let finalErrorText = `Error: ${errorMessage}`;
        
-       if (errorMessage.includes("API Key is missing") || errorMessage.includes("Requested entity was not found")) {
-           finalErrorText = "Error: API Key is missing or invalid. Please set your API Key to continue.";
-           // Auto-trigger the modal if possible, or user relies on the button. 
-           // We will show a special message asking them to click the Key button.
+       if (errorMessage.includes("403") || errorMessage.includes("API Key")) {
+           finalErrorText = "Error: Invalid API Key. Please check your settings.";
+           setShowSettings(true);
        }
 
        setMessages(prev => [...prev, {
@@ -140,7 +172,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
   };
 
   return (
-    <div className="h-full flex flex-col bg-slate-50/50">
+    <div className="h-full flex flex-col bg-slate-50/50 relative">
       <div className="p-4 border-b border-slate-200/50 bg-white/80 backdrop-blur flex justify-between items-center shrink-0 shadow-sm z-10">
         <h2 className="font-bold text-slate-800 flex items-center gap-2">
           <div className="p-1 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-md text-white shadow-md shadow-indigo-200">
@@ -151,26 +183,84 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
         <div className="flex gap-2">
             <span className="text-xs text-blue-600 bg-blue-50 border border-blue-100 px-2 py-1 rounded-md flex items-center gap-1 font-medium">
                 <Layers size={12} />
-                {selectedPages.size} <span className="hidden sm:inline">pages</span>
+                {selectedPages.size}
             </span>
             <button 
-               onClick={openApiKeyModal}
-               className="text-xs text-slate-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
-               title="Set API Key"
+               onClick={() => setShowSettings(!showSettings)}
+               className={`text-xs px-2 py-1 rounded-md transition-colors flex items-center gap-1 border ${showSettings ? 'bg-indigo-50 text-indigo-600 border-indigo-200' : 'text-slate-400 hover:text-blue-600 hover:bg-blue-50 border-transparent hover:border-blue-100'}`}
+               title="Settings"
             >
-               <Key size={12} />
-               <span className="hidden sm:inline">Key</span>
+               <Settings size={12} />
+               <span className="hidden sm:inline">Config</span>
             </button>
             <button 
                 onClick={() => setMessages([])} 
-                className="text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1"
+                className="text-xs text-slate-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-md transition-colors flex items-center gap-1 border border-transparent hover:border-red-100"
                 title="Clear Chat"
             >
                 <RefreshCw size={12}/>
-                <span className="hidden sm:inline">Clear</span>
             </button>
         </div>
       </div>
+
+      {/* Settings Modal Overlay */}
+      {showSettings && (
+        <div className="absolute top-[60px] left-2 right-2 z-30 bg-white rounded-xl shadow-xl border border-slate-200 p-4 animate-in fade-in slide-in-from-top-2">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2 text-sm">
+              <Settings size={14} className="text-indigo-500"/>
+              Assistant Configuration
+            </h3>
+            <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600">
+              <X size={14} />
+            </button>
+          </div>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Gemini API Key</label>
+              <input 
+                type="password" 
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="AIzaSy..."
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all"
+              />
+              <a 
+                href="https://aistudio.google.com/app/apikey" 
+                target="_blank" 
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] text-blue-500 hover:text-blue-700 mt-1.5 font-medium"
+              >
+                Get API Key <ExternalLink size={10} />
+              </a>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 mb-1.5">Model</label>
+              <div className="relative">
+                <select 
+                  value={modelId}
+                  onChange={(e) => setModelId(e.target.value)}
+                  className="w-full appearance-none px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition-all pr-8"
+                >
+                  {AVAILABLE_MODELS.map(model => (
+                    <option key={model.id} value={model.id}>{model.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
+            <button 
+              onClick={saveSettings}
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition-colors shadow-sm"
+            >
+              Save Configuration
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6 scrollbar-thin">
         {messages.map((msg) => (
@@ -274,7 +364,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
                 </div>
                 <div>
                     <div className="font-bold text-slate-700">Thinking...</div>
-                    <div className="text-xs text-slate-400 mt-0.5">Analyzing {selectedPages.size} pages</div>
+                    <div className="text-xs text-slate-400 mt-0.5">Using {AVAILABLE_MODELS.find(m => m.id === modelId)?.name || 'Gemini'}</div>
                 </div>
              </div>
           </div>
