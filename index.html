@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PDF Slice & Chat AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        /* Subtle mesh gradient background for texture */
+        background: radial-gradient(circle at 0% 0%, #eff6ff 0%, #f8fafc 100%);
+        color: #1e293b;
+      }
+      
+      /* Smooth selection color */
+      ::selection {
+        background: #bfdbfe; /* blue-200 */
+        color: #172554; /* blue-950 */
+      }
+
+      /* Custom Scrollbar */
+      .scrollbar-thin::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+      }
+      .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .scrollbar-thin::-webkit-scrollbar-thumb {
+        background-color: transparent;
+        border-radius: 10px;
+        transition: background-color 0.3s ease;
+      }
+      .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+        background-color: #cbd5e1; /* slate-300 */
+      }
+      
+      /* React PDF page styling - Textures */
+      .react-pdf__Page {
+        margin: 0 auto;
+        box-shadow: 
+          0 10px 15px -3px rgb(0 0 0 / 0.1), 
+          0 4px 6px -4px rgb(0 0 0 / 0.1);
+        border-radius: 2px;
+        transition: transform 0.2s ease;
+      }
+
+      /* Animations */
+      @keyframes float {
+        0% { transform: translateY(0px); }
+        50% { transform: translateY(-5px); }
+        100% { transform: translateY(0px); }
+      }
+      .animate-float {
+        animation: float 3s ease-in-out infinite;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "pdf-lib": "https://aistudiocdn.com/pdf-lib@^1.17.1",
+    "react-pdf": "https://aistudiocdn.com/react-pdf@^10.2.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

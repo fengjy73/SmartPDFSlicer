@@ -1,0 +1,5 @@
+{
+  "name": "PDF Slice & Chat AI",
+  "description": "A comprehensive tool to visualize PDF outlines, slice specific chapters, and chat with page content using Gemini AI.",
+  "requestFramePermissions": []
+}
