@@ -1,7 +1,3 @@
-<div align="center">
-  <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # Smart PDF Slicer · PDF Slice & Chat AI
 
 一个现代化的 PDF 章节切片工具，支持基于目录的区域选取、实时预览，并内置可理解所选页面内容的 AI 助手。几秒内导出干净、精确的 PDF 片段。
