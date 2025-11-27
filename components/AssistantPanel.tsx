@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
 import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, Bot, Settings, X, ExternalLink, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 import { analyzeContent } from '../services/geminiService';
 import { extractTextFromPages, extractImagesFromPages } from '../services/pdfUtils';
 
@@ -11,8 +13,9 @@ interface AssistantPanelProps {
 }
 
 const AVAILABLE_MODELS = [
-  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Balanced & Recommended)' },
-  { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro (High Reasoning)' },
+  { id: 'gemini-3-pro-preview', name: 'Gemini 3.0 Pro (Default - High Reasoning)' },
+  { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro (Complex Reasoning)' },
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash (Balanced)' },
   { id: 'gemini-2.0-flash-lite-preview-02-05', name: 'Gemini 2.0 Flash Lite (Fastest)' },
   { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro (Legacy)' },
 ];
@@ -32,7 +35,7 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [apiKey, setApiKey] = useState('');
-  const [modelId, setModelId] = useState('gemini-2.5-flash');
+  const [modelId, setModelId] = useState('gemini-3-pro-preview');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -289,6 +292,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
                   </div>
                   <div className="text-sm overflow-hidden prose prose-sm max-w-none">
                     <ReactMarkdown 
+                        remarkPlugins={[remarkMath]}
+                        rehypePlugins={[rehypeKatex]}
                         components={{
                           ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 my-2 text-slate-700 marker:text-blue-400" {...props} />,
                           ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1 my-2 text-slate-700 marker:text-blue-500 font-medium" {...props} />,

@@ -15,8 +15,8 @@ export const analyzeContent = async (
   try {
     const ai = new GoogleGenAI({ apiKey });
     
-    // Use the user-selected model, default to 2.5 flash if something goes wrong
-    const targetModel = modelId || "gemini-2.5-flash"; 
+    // Use the user-selected model, default to 3.0 pro if something goes wrong
+    const targetModel = modelId || "gemini-3-pro-preview"; 
 
     const parts: any[] = [];
 
