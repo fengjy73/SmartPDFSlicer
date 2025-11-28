@@ -93,6 +93,8 @@ function App() {
         for (let i = 0; i < currentNodes.length; i++) {
             const node = currentNodes[i];
             const nextNode = currentNodes[i + 1];
+            
+            // Tentative end based on next sibling start
             // If there is a next node, the current chapter ends before it starts.
             // If not, it ends at the parent's endLimit.
             const nextStart = nextNode ? nextNode.pageNumber : endLimit + 1;
@@ -100,21 +102,25 @@ function App() {
             // Default range for this node is up to the start of the next one
             let calculatedEnd = nextStart - 1;
 
-            if (node.items && node.items.length > 0) {
-                // Recursively process children with the current node's range
-                processNodes(node.items, node.pageNumber, calculatedEnd);
-                
-                // After processing children, ensure parent's endPageNumber covers them.
-                // In a valid TOC, the last child's end should align with calculatedEnd.
-                node.endPageNumber = calculatedEnd;
-            } else {
-                node.endPageNumber = calculatedEnd;
+            // Ensure strict sanity: range can't appear before it starts
+            if (calculatedEnd < node.pageNumber) {
+                calculatedEnd = node.pageNumber; 
             }
 
-            // Safety check: end page cannot be before start page
-            if (node.endPageNumber < node.pageNumber) {
-                node.endPageNumber = node.pageNumber;
+            if (node.items && node.items.length > 0) {
+                // Recursively process children using the calculated end as their context limit
+                processNodes(node.items, node.pageNumber, calculatedEnd);
+                
+                // CRITICAL FIX: After processing children, ensure parent's endPageNumber covers them.
+                // If a child extends beyond the 'next sibling start' (e.g. child starts on the same page as next chapter),
+                // we must extend the parent to include that child.
+                const lastChild = node.items[node.items.length - 1];
+                if (lastChild.endPageNumber && lastChild.endPageNumber > calculatedEnd) {
+                    calculatedEnd = lastChild.endPageNumber;
+                }
             }
+
+            node.endPageNumber = calculatedEnd;
         }
     };
 
