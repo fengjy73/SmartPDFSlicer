@@ -2,8 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChatMessage } from '../types';
 import { Send, Sparkles, Loader2, RefreshCw, Layers, Copy, Check, Bot, Settings, X, ExternalLink, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
 import { analyzeContent } from '../services/geminiService';
 import { extractTextFromPages, extractImagesFromPages } from '../services/pdfUtils';
 
@@ -37,6 +35,9 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
   const [apiKey, setApiKey] = useState('');
   const [modelId, setModelId] = useState('gemini-3-pro-preview');
   
+  // Dynamic Plugins State for Markdown
+  const [markdownPlugins, setMarkdownPlugins] = useState<{remarkPlugins: any[], rehypePlugins: any[]}>({ remarkPlugins: [], rehypePlugins: [] });
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load settings from localStorage on mount
@@ -48,6 +49,26 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
     if (savedModel && AVAILABLE_MODELS.some(m => m.id === savedModel)) {
       setModelId(savedModel);
     }
+  }, []);
+
+  // Dynamically load Markdown plugins (Math support) to avoid build errors with missing node_modules
+  useEffect(() => {
+    const loadPlugins = async () => {
+      try {
+        // @ts-ignore
+        const [remarkMath, rehypeKatex] = await Promise.all([
+          import('https://esm.sh/remark-math@6.0.0'),
+          import('https://esm.sh/rehype-katex@7.0.0')
+        ]);
+        setMarkdownPlugins({
+          remarkPlugins: [remarkMath.default || remarkMath],
+          rehypePlugins: [rehypeKatex.default || rehypeKatex]
+        });
+      } catch (e) {
+        console.warn("Failed to load Math plugins:", e);
+      }
+    };
+    loadPlugins();
   }, []);
 
   const saveSettings = () => {
@@ -292,8 +313,8 @@ export const AssistantPanel: React.FC<AssistantPanelProps> = ({ file, selectedPa
                   </div>
                   <div className="text-sm overflow-hidden prose prose-sm max-w-none">
                     <ReactMarkdown 
-                        remarkPlugins={[remarkMath]}
-                        rehypePlugins={[rehypeKatex]}
+                        remarkPlugins={markdownPlugins.remarkPlugins}
+                        rehypePlugins={markdownPlugins.rehypePlugins}
                         components={{
                           ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 my-2 text-slate-700 marker:text-blue-400" {...props} />,
                           ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1 my-2 text-slate-700 marker:text-blue-500 font-medium" {...props} />,
