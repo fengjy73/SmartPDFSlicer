@@ -179,15 +179,32 @@ function App() {
     let baseName = file.name.replace(/\.pdf$/i, "");
     let suffix = "Selection";
 
-    const sortedPages = Array.from(selectedPages).sort((a: number, b: number) => a - b);
+    const sortedPages: number[] = Array.from(selectedPages).sort((a: number, b: number) => a - b);
     const firstPage = sortedPages[0];
 
     if (firstPage !== undefined) {
-      const matchedNode = outline.find(node => {
-        const start = node.pageNumber;
-        const end = node.endPageNumber || start;
-        return firstPage >= start && firstPage <= end;
-      });
+      // Recursive search to find the most specific (deepest) node that contains the start page
+      const findDeepestNodeCoveringPage = (nodes: OutlineNode[], page: number): OutlineNode | null => {
+        for (const node of nodes) {
+           const start = node.pageNumber;
+           const end = node.endPageNumber || start;
+           
+           if (page >= start && page <= end) {
+             // This node matches. Check if a child provides a more specific match.
+             if (node.items && node.items.length > 0) {
+                const childMatch = findDeepestNodeCoveringPage(node.items, page);
+                if (childMatch) {
+                   return childMatch;
+                }
+             }
+             // No child match (or no children), so this node is the deepest match
+             return node;
+           }
+        }
+        return null;
+      };
+
+      const matchedNode = findDeepestNodeCoveringPage(outline, firstPage);
 
       if (matchedNode) {
         suffix = matchedNode.title;
